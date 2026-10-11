@@ -1,0 +1,41 @@
+name: Build Android ARM64 APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [agent/android-arm64-unlocked]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: false
+      - uses: actions/checkout@v4
+      - name: Build APK
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          mkdir -p Builds
+          docker run --rm -v "$PWD:/project" -w /project \
+            -e UNITY_EMAIL -e UNITY_PASSWORD \
+            unityci/editor:ubuntu-2022.3.55f1-android-3 \
+            bash /project/.github/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CardWars-ARM64
+          path: Builds/Android/*.apk
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unity-log
+          path: Builds/unity-build.log
+          if-no-files-found: ignore
